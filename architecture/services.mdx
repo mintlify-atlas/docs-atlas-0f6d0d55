@@ -1,0 +1,180 @@
+---
+title: "Services"
+description: "Service layer design and dependency injection in web3Wallet"
+---
+
+Services are the **business logic layer** of a NestJS application. Controllers handle routing and request/response shaping; services contain everything else — data access, external API calls, computation, and validation. Keeping logic in services rather than controllers makes each unit independently testable and reusable across multiple routes.
+
+## AppService
+
+`AppService` is the root service. It is declared as a provider in `AppModule` and injected into `AppController`.
+
+```typescript app.service.ts
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class AppService {
+  getHello(): string {
+    return 'Hello World!';
+  }
+}
+```
+
+The `@Injectable()` decorator registers the class with NestJS's DI container. NestJS creates a single instance of the class (singleton scope by default) and supplies that same instance to every consumer within the module.
+
+## Injecting a service into a controller
+
+`AppController` receives `AppService` through constructor injection. NestJS matches the constructor parameter type (`AppService`) to the provider registered in `AppModule` and injects the instance automatically at bootstrap.
+
+```typescript app.controller.ts
+import { Controller, Get } from '@nestjs/common';
+import { AppService } from './app.service';
+
+@Controller()
+export class AppController {
+  constructor(private readonly appService: AppService) {}
+
+  @Get()
+  getHello(): string {
+    return this.appService.getHello();
+  }
+}
+```
+
+<Tip>
+Mark injected dependencies as `private readonly`. `private` prevents other classes from accessing the dependency directly; `readonly` signals that the reference is never reassigned after construction.
+</Tip>
+
+The controller's only job is to call `appService.getHello()` and return the result. It does not know how the string is produced — that detail lives entirely inside the service.
+
+## Extending the service layer
+
+As wallet features are added, each domain gets its own service. The pattern mirrors what you see in `AppService`:
+
+1. Create a service class decorated with `@Injectable()`.
+2. Declare it in the `providers` array of its feature module.
+3. Inject it into the corresponding controller (or into other services).
+
+<CodeGroup>
+
+```typescript src/wallet/wallet.service.ts
+import { Injectable, NotFoundException } from '@nestjs/common';
+
+export interface Wallet {
+  id: string;
+  address: string;
+  balance: number;
+}
+
+@Injectable()
+export class WalletService {
+  private readonly wallets: Wallet[] = [];
+
+  create(address: string): Wallet {
+    const wallet: Wallet = {
+      id: crypto.randomUUID(),
+      address,
+      balance: 0,
+    };
+    this.wallets.push(wallet);
+    return wallet;
+  }
+
+  findById(id: string): Wallet {
+    const wallet = this.wallets.find((w) => w.id === id);
+    if (!wallet) {
+      throw new NotFoundException(`Wallet ${id} not found`);
+    }
+    return wallet;
+  }
+
+  findAll(): Wallet[] {
+    return this.wallets;
+  }
+}
+```
+
+```typescript src/wallet/wallet.controller.ts
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { WalletService } from './wallet.service';
+
+@Controller('wallets')
+export class WalletController {
+  constructor(private readonly walletService: WalletService) {}
+
+  @Post()
+  create(@Body('address') address: string) {
+    return this.walletService.create(address);
+  }
+
+  @Get()
+  findAll() {
+    return this.walletService.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.walletService.findById(id);
+  }
+}
+```
+
+```typescript src/wallet/wallet.module.ts
+import { Module } from '@nestjs/common';
+import { WalletController } from './wallet.controller';
+import { WalletService } from './wallet.service';
+
+@Module({
+  controllers: [WalletController],
+  providers: [WalletService],
+  exports: [WalletService],
+})
+export class WalletModule {}
+```
+
+</CodeGroup>
+
+<Note>
+The in-memory array used in `WalletService` above is intentionally simple. In production, replace it with a repository or ORM (e.g., TypeORM's `@InjectRepository()`) injected the same way — through the constructor.
+</Note>
+
+## Injecting one service into another
+
+Services can depend on other services. Declare the dependency as a constructor parameter, and ensure the provider module exports it.
+
+```typescript src/transaction/transaction.service.ts
+import { Injectable } from '@nestjs/common';
+import { WalletService } from '../wallet/wallet.service';
+
+@Injectable()
+export class TransactionService {
+  constructor(private readonly walletService: WalletService) {}
+
+  transfer(fromId: string, toId: string, amount: number): void {
+    const from = this.walletService.findById(fromId);
+    const to = this.walletService.findById(toId);
+
+    if (from.balance < amount) {
+      throw new Error('Insufficient balance');
+    }
+
+    from.balance -= amount;
+    to.balance += amount;
+  }
+}
+```
+
+<Tip>
+Keep services focused on a single responsibility. A service that validates, stores, and sends notifications is harder to test and refactor than three narrowly scoped services that each do one thing.
+</Tip>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture overview" icon="map" href="/architecture/overview">
+    Revisit the full bootstrap flow and how services fit into the module graph.
+  </Card>
+  <Card title="Modules" icon="puzzle-piece" href="/architecture/modules">
+    Learn how to declare providers in feature modules and share them across the application.
+  </Card>
+</CardGroup>

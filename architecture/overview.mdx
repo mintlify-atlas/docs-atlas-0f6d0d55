@@ -1,0 +1,127 @@
+---
+title: "Architecture overview"
+description: "Understanding the NestJS module structure powering web3Wallet"
+---
+
+web3Wallet is built on [NestJS](https://nestjs.com), a Node.js framework that uses TypeScript decorators to organize code into **modules**, **controllers**, and **providers**. This page explains how those three building blocks fit together and how a request flows through the application from bootstrap to response.
+
+## Core concepts
+
+NestJS structures every application around three primitives:
+
+- **Modules** — Logical units that group related controllers and providers. Every app has at least one root module (`AppModule`).
+- **Controllers** — Classes decorated with `@Controller()` that handle incoming HTTP requests and return responses.
+- **Providers** — Classes decorated with `@Injectable()` (services, repositories, factories, etc.) that contain business logic and are injected wherever needed.
+
+These three primitives are wired together through NestJS's built-in **dependency injection (DI) container**. You declare what a module contains; NestJS instantiates and connects everything automatically.
+
+## Application bootstrap flow
+
+<Steps>
+  <Step title="Entry point — main.ts">
+    Node.js runs `main.ts`, which calls `NestFactory.create(AppModule)` to spin up the DI container and compile the module graph.
+
+    ```typescript main.ts
+    import { NestFactory } from '@nestjs/core';
+    import { AppModule } from './app.module';
+
+    async function bootstrap() {
+      const app = await NestFactory.create(AppModule);
+      await app.listen(3000);
+    }
+    bootstrap();
+    ```
+
+    `NestFactory.create` reads the `AppModule` metadata, instantiates every provider declared in it, and wires all dependencies before the server starts accepting connections.
+  </Step>
+
+  <Step title="Module registration — AppModule">
+    `AppModule` is the root module. Its `@Module()` decorator tells NestJS which controllers handle routes and which providers are available for injection within this module.
+
+    ```typescript app.module.ts
+    import { Module } from '@nestjs/common';
+    import { AppController } from './app.controller';
+    import { AppService } from './app.service';
+
+    @Module({
+      imports: [],
+      controllers: [AppController],
+      providers: [AppService],
+    })
+    export class AppModule {}
+    ```
+
+    The `imports` array is where child feature modules (e.g., `WalletModule`, `TransactionModule`) will be registered as the application grows.
+  </Step>
+
+  <Step title="Request handling — AppController">
+    When a `GET /` request arrives, NestJS routes it to `AppController.getHello()`. The controller delegates work to `AppService` rather than implementing logic itself.
+
+    ```typescript app.controller.ts
+    import { Controller, Get } from '@nestjs/common';
+    import { AppService } from './app.service';
+
+    @Controller()
+    export class AppController {
+      constructor(private readonly appService: AppService) {}
+
+      @Get()
+      getHello(): string {
+        return this.appService.getHello();
+      }
+    }
+    ```
+
+    `AppService` is injected into the controller through its constructor. NestJS resolves the dependency automatically because `AppService` is declared as a provider in `AppModule`.
+  </Step>
+
+  <Step title="Business logic — AppService">
+    `AppService` carries out the actual work and returns a value to the controller.
+
+    ```typescript app.service.ts
+    import { Injectable } from '@nestjs/common';
+
+    @Injectable()
+    export class AppService {
+      getHello(): string {
+        return 'Hello World!';
+      }
+    }
+    ```
+
+    The `@Injectable()` decorator marks the class as a DI-managed provider. NestJS creates a single shared instance (singleton by default) and injects it wherever it is requested.
+  </Step>
+</Steps>
+
+## Dependency injection in practice
+
+NestJS's DI container follows these rules for web3Wallet:
+
+1. A provider must be listed in the `providers` array of its module before it can be injected.
+2. Controllers declare their dependencies as constructor parameters typed to the provider class. NestJS matches the parameter type to a registered provider and supplies the instance.
+3. Providers are singletons within their module scope by default — one instance is shared across all consumers in that module.
+
+```
+HTTP request
+     │
+     ▼
+AppController  ──(injects)──▶  AppService
+     │                               │
+     │◀──── returns string ──────────┘
+     │
+     ▼
+HTTP response
+```
+
+As wallet features are added, additional feature modules (each with their own controllers and services) will be registered in `AppModule.imports`, keeping each domain concern isolated and independently testable.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Modules" icon="puzzle-piece" href="/architecture/modules">
+    Explore how modules are declared and how to add feature modules for wallet and transaction domains.
+  </Card>
+  <Card title="Services" icon="gear" href="/architecture/services">
+    Learn how the service layer works and how to extend it with wallet business logic.
+  </Card>
+</CardGroup>

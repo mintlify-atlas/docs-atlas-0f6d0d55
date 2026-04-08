@@ -1,23 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "name": "web3Wallet API",
+  "projectType": "api-service",
+  "projectName": "web3Wallet API",
+  "projectDescription": "A NestJS-powered backend API for managing Web3 wallet operations including account management, transactions, and blockchain interactions.",
   "theme": "luma",
-  "colors": {
-    "primary": "#de2850",
-    "light": "#e08cac"
-  },
-  "favicon": "https://media.brand.dev/29c481de-2859-4cec-b430-eb582a269988.jpg",
-  "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/smonderoy/web3Wallet"
-    }
-  },
-  "footer": {
-    "socials": {
-      "github": "https://github.com/smonderoy/web3Wallet"
-    }
-  },
+  "primaryColor": "#de2850",
+  "lightColor": "#e08cac",
+  "darkColor": null,
   "navigation": {
     "tabs": [
       {
@@ -72,5 +60,19 @@
         ]
       }
     ]
-  }
+  },
+  "keyFeatures": [
+    "NestJS framework with modular architecture",
+    "TypeScript-first backend development",
+    "RESTful API for Web3 wallet operations",
+    "Dependency injection with providers and services",
+    "Built-in testing support with Jest and Supertest",
+    "Express platform integration"
+  ],
+  "publicApiSurface": [
+    "GET / — Health check endpoint returning service status",
+    "AppController — Root HTTP controller",
+    "AppService — Core application service",
+    "AppModule — Root NestJS module"
+  ]
 }

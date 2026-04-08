@@ -1,0 +1,129 @@
+---
+title: "Configuration"
+description: "Configure the web3Wallet API for your environment"
+---
+
+## Application bootstrap
+
+The entry point for the application is `src/main.ts`. It uses `NestFactory.create` to instantiate the NestJS application from the root `AppModule`, then starts the HTTP listener.
+
+```typescript src/main.ts
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  await app.listen(3000);
+}
+bootstrap();
+```
+
+## Port configuration
+
+By default, the server listens on port **3000**. To run on a different port, update `src/main.ts` to read from an environment variable with `3000` as the fallback.
+
+<CodeGroup>
+
+```typescript src/main.ts (with PORT env var)
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  await app.listen(process.env.PORT ?? 3000);
+}
+bootstrap();
+```
+
+```bash .env
+PORT=4000
+```
+
+</CodeGroup>
+
+Set the `PORT` variable in your shell or in a `.env` file before starting the server.
+
+```bash
+PORT=4000 npm run start:dev
+```
+
+<Warning>
+  If you change the port, update any reverse proxy rules, firewall settings, or client configurations that reference the default port 3000.
+</Warning>
+
+## Nest CLI settings
+
+The `nest-cli.json` file controls how the NestJS CLI builds and watches the project.
+
+```json nest-cli.json
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true
+  }
+}
+```
+
+| Field | Value | Description |
+|---|---|---|
+| `collection` | `@nestjs/schematics` | Schematics collection used for `nest generate` commands |
+| `sourceRoot` | `src` | Root directory for application source files |
+| `compilerOptions.deleteOutDir` | `true` | Clears the `dist/` output directory before each build |
+
+## TypeScript configuration
+
+TypeScript compiler options are defined in `tsconfig.json`.
+
+```json tsconfig.json
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2021",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false
+  }
+}
+```
+
+Key options relevant to NestJS:
+
+- **`emitDecoratorMetadata`** and **`experimentalDecorators`** — required for NestJS decorators (`@Controller`, `@Injectable`, `@Module`, etc.) to work correctly
+- **`target: ES2021`** — compiles to ES2021, compatible with Node.js v16+
+- **`outDir: ./dist`** — compiled output is written to the `dist/` directory
+- **`incremental: true`** — enables faster rebuilds by caching compilation state
+
+<Note>
+  For production builds, TypeScript is compiled via `nest build` (which runs `tsc` using `tsconfig.build.json`). The `tsconfig.build.json` file extends `tsconfig.json` and excludes test files.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Run the server for the first time and make your first API request
+  </Card>
+  <Card title="Architecture overview" icon="building" href="/architecture/overview">
+    Explore the module, controller, and service structure
+  </Card>
+  <Card title="Deployment guide" icon="cloud" href="/guides/deployment">
+    Configure the API for a production environment
+  </Card>
+  <Card title="Testing guide" icon="flask" href="/guides/testing">
+    Run unit tests and end-to-end tests
+  </Card>
+</CardGroup>

@@ -1,0 +1,45 @@
+---
+title: "Wallet model"
+description: "Data model for Web3 wallet objects"
+---
+
+The Wallet object is returned by wallet creation and lookup endpoints. It represents a single Web3 wallet and its associated on-chain metadata.
+
+## Fields
+
+<ResponseField name="address" type="string" required>
+  The wallet's blockchain address in 0x-prefixed hexadecimal format (e.g. `0xAbCd1234...`). This is the unique identifier for the wallet on-chain.
+</ResponseField>
+
+<ResponseField name="publicKey" type="string" required>
+  The wallet's public key in 0x-prefixed hexadecimal format. Used to verify signed messages and transactions.
+</ResponseField>
+
+<ResponseField name="balance" type="string" required>
+  The wallet's current balance in the blockchain's smallest native unit (wei for Ethereum-compatible networks). Returned as a string to preserve precision for large integer values.
+</ResponseField>
+
+<ResponseField name="network" type="string" required>
+  The blockchain network this wallet belongs to. Examples: `mainnet`, `sepolia`, `polygon`.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  ISO 8601 timestamp for when the wallet record was created. Example: `2026-04-08T12:00:00.000Z`.
+</ResponseField>
+
+## Example
+
+```json
+{
+  "address": "0xAbCd1234EfGh5678IjKl9012MnOp3456QrSt7890",
+  "publicKey": "0x04a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+  "balance": "500000000000000000",
+  "network": "sepolia",
+  "createdAt": "2026-04-08T12:00:00.000Z"
+}
+```
+
+## Related
+
+- [Wallet endpoints](/api/wallet) — endpoints that create and return Wallet objects
+- [Transaction model](/api/models/transaction) — the Transaction object returned by transaction endpoints

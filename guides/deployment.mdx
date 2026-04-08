@@ -1,0 +1,147 @@
+---
+title: "Deployment"
+description: "Deploying the web3Wallet API to production"
+---
+
+The web3Wallet API is a standard NestJS application. It compiles to plain JavaScript in a `dist/` directory and runs with Node.js — making it straightforward to deploy anywhere Node runs, including containers, VMs, and serverless platforms.
+
+<Warning>
+  Always set `NODE_ENV=production` in production deployments. This disables development-only behavior in NestJS and its underlying libraries, including verbose error messages that can expose internal details.
+</Warning>
+
+## Build and start commands
+
+The relevant scripts from `package.json` are:
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| `build` | `nest build` | Compiles TypeScript to `dist/` |
+| `start:prod` | `node dist/main` | Runs the compiled output |
+
+`nest build` invokes the NestJS CLI compiler, which uses `tsconfig.json` to transpile all source files under `src/` into `dist/`. The entry point is always `dist/main.js`, which mirrors `src/main.ts`:
+
+```typescript src/main.ts
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  await app.listen(3000);
+}
+bootstrap();
+```
+
+The server listens on port `3000` by default.
+
+## Deployment
+
+<Steps>
+  <Step title="Build the application">
+    ```bash
+    npm run build
+    ```
+
+    This produces a `dist/` directory containing compiled JavaScript. Confirm the build succeeded before proceeding.
+  </Step>
+
+  <Step title="Set environment variables">
+    At minimum, set `NODE_ENV` before starting:
+
+    ```bash
+    export NODE_ENV=production
+    export PORT=3000
+    ```
+
+    Add any additional variables your wallet service requires (API keys, RPC URLs, database URIs) through your platform's secret management system — not hardcoded in source files.
+  </Step>
+
+  <Step title="Start the production server">
+    ```bash
+    NODE_ENV=production npm run start:prod
+    ```
+
+    `npm run start:prod` runs `node dist/main`, which starts the compiled application on port `3000`.
+  </Step>
+
+  <Step title="Verify the deployment">
+    ```bash
+    curl http://your-host:3000/
+    ```
+
+    A `200 OK` response with the body `Hello World!` confirms the API is running.
+  </Step>
+</Steps>
+
+## Docker
+
+Containerizing the API ensures a consistent runtime environment across development, staging, and production.
+
+```dockerfile Dockerfile
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+COPY --from=builder /app/dist ./dist
+
+ENV NODE_ENV=production
+ENV PORT=3000
+
+EXPOSE 3000
+
+CMD ["node", "dist/main"]
+```
+
+This uses a multi-stage build: the first stage installs all dependencies and compiles the TypeScript, and the second stage copies only the compiled output and production dependencies — keeping the final image small.
+
+Build and run the container:
+
+```bash
+# Build the image
+docker build -t web3wallet-api .
+
+# Run the container
+docker run -p 3000:3000 --env NODE_ENV=production web3wallet-api
+```
+
+<Tip>
+  Pass secrets at runtime with `--env` or `--env-file` rather than baking them into the image. For example: `docker run -p 3000:3000 --env-file .env.production web3wallet-api`.
+</Tip>
+
+## Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NODE_ENV` | Yes | Set to `production` for production deployments |
+| `PORT` | No | Port to listen on. Defaults to `3000` if not set |
+
+<Note>
+  The current `src/main.ts` hardcodes port `3000`. To respect the `PORT` environment variable, update the `listen` call: `await app.listen(process.env.PORT ?? 3000)`.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/guides/authentication">
+    Secure endpoints before going to production
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/configuration">
+    Environment and configuration options
+  </Card>
+  <Card title="Testing" icon="flask" href="/guides/testing">
+    Run tests before deploying
+  </Card>
+  <Card title="Architecture" icon="building" href="/architecture/overview">
+    Understand the module structure
+  </Card>
+</CardGroup>

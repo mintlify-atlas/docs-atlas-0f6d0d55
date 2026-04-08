@@ -1,0 +1,161 @@
+---
+title: "Testing"
+description: "Running unit and end-to-end tests for the web3Wallet API"
+---
+
+The web3Wallet API includes two types of tests out of the box: **unit tests** that test individual classes in isolation, and **end-to-end (e2e) tests** that spin up the full NestJS application and make real HTTP requests against it.
+
+## Test scripts
+
+All test commands are defined in `package.json`:
+
+<CodeGroup>
+
+```bash unit tests
+npm run test
+```
+
+```bash unit tests with coverage
+npm run test:cov
+```
+
+```bash e2e tests
+npm run test:e2e
+```
+
+</CodeGroup>
+
+The scripts map to:
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| `test` | `jest` | Run all unit tests (`*.spec.ts` files) once |
+| `test:cov` | `jest --coverage` | Run unit tests and generate a coverage report in `coverage/` |
+| `test:e2e` | `jest --config ./test/jest-e2e.json` | Run e2e tests (`*.e2e-spec.ts` files) using a separate Jest config |
+
+## Unit tests
+
+Unit tests live alongside source files as `*.spec.ts` files. The Jest configuration in `package.json` looks for any file matching `.*\.spec\.ts$` under `src/`.
+
+The existing unit test for `AppController` is:
+
+```typescript src/app.controller.spec.ts
+import { Test, TestingModule } from '@nestjs/testing';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+
+describe('AppController', () => {
+  let appController: AppController;
+
+  beforeEach(async () => {
+    const app: TestingModule = await Test.createTestingModule({
+      controllers: [AppController],
+      providers: [AppService],
+    }).compile();
+
+    appController = app.get<AppController>(AppController);
+  });
+
+  describe('root', () => {
+    it('should return "Hello World!"', () => {
+      expect(appController.getHello()).toBe('Hello World!');
+    });
+  });
+});
+```
+
+`Test.createTestingModule()` from `@nestjs/testing` creates a sandboxed NestJS module. You declare only the controllers and providers needed for the test — in this case `AppController` and `AppService`. After calling `.compile()`, you retrieve the controller instance with `app.get<AppController>(AppController)` and assert its behavior directly.
+
+This approach keeps tests fast because no HTTP server is started and no I/O occurs.
+
+## End-to-end tests
+
+E2e tests live in the `test/` directory as `*.e2e-spec.ts` files. They use a dedicated Jest configuration:
+
+<CodeGroup>
+
+```json test/jest-e2e.json
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": ".e2e-spec.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  }
+}
+```
+
+```typescript test/app.e2e-spec.ts
+import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication } from '@nestjs/common';
+import * as request from 'supertest';
+import { AppModule } from './../src/app.module';
+
+describe('AppController (e2e)', () => {
+  let app: INestApplication;
+
+  beforeEach(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    await app.init();
+  });
+
+  it('/ (GET)', () => {
+    return request(app.getHttpServer())
+      .get('/')
+      .expect(200)
+      .expect('Hello World!');
+  });
+});
+```
+
+</CodeGroup>
+
+Unlike unit tests, e2e tests import the entire `AppModule` and call `moduleFixture.createNestApplication()` to boot a real NestJS application instance. [Supertest](https://github.com/ladjs/supertest) wraps the HTTP server so you can make requests without binding to a port.
+
+The test asserts that `GET /` returns HTTP `200` with the body `Hello World!` — matching the behavior of `AppController.getHello()`.
+
+## Running tests
+
+<Steps>
+  <Step title="Run unit tests">
+    ```bash
+    npm run test
+    ```
+
+    Jest will scan `src/` for `*.spec.ts` files and report pass/fail for each `it()` block.
+  </Step>
+
+  <Step title="Check coverage">
+    ```bash
+    npm run test:cov
+    ```
+
+    A coverage report is written to `coverage/`. Open `coverage/lcov-report/index.html` in a browser to browse line-by-line coverage. The `collectCoverageFrom` field in `package.json` collects coverage from all `*.ts` files under `src/`.
+  </Step>
+
+  <Step title="Run e2e tests">
+    ```bash
+    npm run test:e2e
+    ```
+
+    Jest uses `test/jest-e2e.json` as the config, which sets `rootDir` to `test/` and matches files ending in `.e2e-spec.ts`.
+  </Step>
+</Steps>
+
+<Note>
+  Unit tests and e2e tests use separate Jest configurations. Running `npm run test` will not execute e2e tests, and `npm run test:e2e` will not execute unit tests. Run both to get full coverage.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Wallet operations" icon="wallet" href="/guides/wallet-operations">
+    Add wallet endpoints to test against
+  </Card>
+  <Card title="Architecture" icon="building" href="/architecture/services">
+    Understand the service layer to write better unit tests
+  </Card>
+</CardGroup>

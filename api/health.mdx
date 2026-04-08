@@ -1,0 +1,40 @@
+---
+title: "Health check"
+description: "Verify the web3Wallet API is running"
+---
+
+<Note>
+  This is the only currently implemented endpoint. The wallet and transaction endpoints are the planned API surface — see [Wallet endpoints](/api/wallet) and [Transaction endpoints](/api/transactions).
+</Note>
+
+Returns a plain string response to confirm the server is running. Defined in `src/app.controller.ts`, it calls `AppService.getHello()` and returns the string `"Hello World!"`.
+
+## Endpoint
+
+**Method:** `GET`
+
+**Path:** `/`
+
+**Authentication:** None
+
+## Parameters
+
+This endpoint takes no parameters.
+
+## Response
+
+Returns a plain `text/plain` string with HTTP status `200 OK`.
+
+<ResponseField name="body" type="string">
+  The literal string `Hello World!`
+</ResponseField>
+
+## Example
+
+```bash
+curl http://localhost:3000/
+```
+
+```
+Hello World!
+```

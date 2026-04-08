@@ -1,0 +1,246 @@
+---
+title: "Transaction endpoints"
+description: "Endpoints for sending and querying blockchain transactions"
+---
+
+<Note>
+  These endpoints represent the intended API surface for the web3Wallet project. They follow standard NestJS controller patterns and are ready to be implemented. Only the [health check endpoint](/api/health) (`GET /`) is currently active.
+</Note>
+
+## Send a transaction
+
+Submits a new transaction to the blockchain and returns the transaction details.
+
+**Method:** `POST`  
+**Path:** `/transactions`  
+**Authentication:** None
+
+### Request body
+
+<ParamField body="from" type="string" required>
+  The sender's wallet address (0x-prefixed).
+</ParamField>
+
+<ParamField body="to" type="string" required>
+  The recipient's wallet address (0x-prefixed).
+</ParamField>
+
+<ParamField body="value" type="string" required>
+  Amount to send in native units (wei for Ethereum-compatible networks).
+</ParamField>
+
+<ParamField body="gasPrice" type="string">
+  Gas price in wei. If omitted, the network's current gas price is used.
+</ParamField>
+
+<ParamField body="gasLimit" type="string">
+  Maximum gas units for the transaction. Defaults to a network-estimated value.
+</ParamField>
+
+### Response
+
+<ResponseField name="hash" type="string" required>
+  The transaction hash, used to track the transaction on-chain.
+</ResponseField>
+
+<ResponseField name="from" type="string" required>
+  Sender address.
+</ResponseField>
+
+<ResponseField name="to" type="string" required>
+  Recipient address.
+</ResponseField>
+
+<ResponseField name="value" type="string" required>
+  Amount sent in native units.
+</ResponseField>
+
+<ResponseField name="gasPrice" type="string" required>
+  Gas price used for the transaction.
+</ResponseField>
+
+<ResponseField name="gasLimit" type="string" required>
+  Gas limit set for the transaction.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Transaction status: `pending`, `confirmed`, or `failed`.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  ISO 8601 timestamp for when the transaction was submitted.
+</ResponseField>
+
+### Example
+
+```bash
+curl --request POST \
+  --url http://localhost:3000/transactions \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "from": "0xAbCd1234EfGh5678IjKl9012MnOp3456QrSt7890",
+    "to": "0x1234AbCd5678EfGh9012IjKl3456MnOp7890QrSt",
+    "value": "100000000000000000"
+  }'
+```
+
+```json
+{
+  "hash": "0xabc123def456...",
+  "from": "0xAbCd1234EfGh5678IjKl9012MnOp3456QrSt7890",
+  "to": "0x1234AbCd5678EfGh9012IjKl3456MnOp7890QrSt",
+  "value": "100000000000000000",
+  "gasPrice": "20000000000",
+  "gasLimit": "21000",
+  "status": "pending",
+  "timestamp": "2026-04-08T12:05:00.000Z"
+}
+```
+
+---
+
+## Get transaction by hash
+
+Retrieves the details and current status of a transaction.
+
+**Method:** `GET`  
+**Path:** `/transactions/:hash`  
+**Authentication:** None
+
+### Path parameters
+
+<ParamField path="hash" type="string" required>
+  The transaction hash (0x-prefixed).
+</ParamField>
+
+### Response
+
+<ResponseField name="hash" type="string" required>
+  The transaction hash.
+</ResponseField>
+
+<ResponseField name="from" type="string" required>
+  Sender address.
+</ResponseField>
+
+<ResponseField name="to" type="string" required>
+  Recipient address.
+</ResponseField>
+
+<ResponseField name="value" type="string" required>
+  Amount transferred in native units.
+</ResponseField>
+
+<ResponseField name="gasPrice" type="string" required>
+  Gas price used.
+</ResponseField>
+
+<ResponseField name="gasLimit" type="string" required>
+  Gas limit set.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Transaction status: `pending`, `confirmed`, or `failed`.
+</ResponseField>
+
+<ResponseField name="blockNumber" type="number">
+  Block number in which the transaction was confirmed. Only present when `status` is `confirmed`.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  ISO 8601 timestamp for when the transaction was submitted.
+</ResponseField>
+
+### Example
+
+```bash
+curl http://localhost:3000/transactions/0xabc123def456...
+```
+
+```json
+{
+  "hash": "0xabc123def456...",
+  "from": "0xAbCd1234EfGh5678IjKl9012MnOp3456QrSt7890",
+  "to": "0x1234AbCd5678EfGh9012IjKl3456MnOp7890QrSt",
+  "value": "100000000000000000",
+  "gasPrice": "20000000000",
+  "gasLimit": "21000",
+  "status": "confirmed",
+  "blockNumber": 19823401,
+  "timestamp": "2026-04-08T12:05:00.000Z"
+}
+```
+
+---
+
+## List transactions for a wallet
+
+Returns a list of transactions associated with a given wallet address.
+
+**Method:** `GET`  
+**Path:** `/wallet/:address/transactions`  
+**Authentication:** None
+
+### Path parameters
+
+<ParamField path="address" type="string" required>
+  The wallet address to query transactions for (0x-prefixed).
+</ParamField>
+
+### Response
+
+Returns an array of transaction objects.
+
+<ResponseField name="transactions" type="object[]" required>
+  <Expandable title="properties">
+    <ResponseField name="hash" type="string" required>
+      The transaction hash.
+    </ResponseField>
+    <ResponseField name="from" type="string" required>
+      Sender address.
+    </ResponseField>
+    <ResponseField name="to" type="string" required>
+      Recipient address.
+    </ResponseField>
+    <ResponseField name="value" type="string" required>
+      Amount transferred in native units.
+    </ResponseField>
+    <ResponseField name="gasPrice" type="string" required>
+      Gas price used.
+    </ResponseField>
+    <ResponseField name="gasLimit" type="string" required>
+      Gas limit set.
+    </ResponseField>
+    <ResponseField name="status" type="string" required>
+      Transaction status: `pending`, `confirmed`, or `failed`.
+    </ResponseField>
+    <ResponseField name="blockNumber" type="number">
+      Block number when confirmed. Only present when `status` is `confirmed`.
+    </ResponseField>
+    <ResponseField name="timestamp" type="string" required>
+      ISO 8601 timestamp for when the transaction was submitted.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+```bash
+curl http://localhost:3000/wallet/0xAbCd1234EfGh5678IjKl9012MnOp3456QrSt7890/transactions
+```
+
+```json
+[
+  {
+    "hash": "0xabc123def456...",
+    "from": "0xAbCd1234EfGh5678IjKl9012MnOp3456QrSt7890",
+    "to": "0x1234AbCd5678EfGh9012IjKl3456MnOp7890QrSt",
+    "value": "100000000000000000",
+    "gasPrice": "20000000000",
+    "gasLimit": "21000",
+    "status": "confirmed",
+    "blockNumber": 19823401,
+    "timestamp": "2026-04-08T12:05:00.000Z"
+  }
+]
+```

@@ -1,0 +1,148 @@
+---
+title: "Authentication"
+description: "Securing your web3Wallet API endpoints"
+---
+
+The web3Wallet API scaffold does not include authentication out of the box. Before deploying to production, you must add an authentication layer to protect wallet and transaction endpoints.
+
+<Warning>
+  The default scaffold exposes all endpoints without any access control. Production deployments must implement authentication before handling real wallet data or transactions.
+</Warning>
+
+NestJS provides a first-class Guard system that integrates cleanly with the existing module structure. The two most common approaches for REST APIs are **JWT bearer tokens** and **API keys**.
+
+<Note>
+  NestJS has built-in Passport integration via `@nestjs/passport`. Passport supports dozens of strategies including JWT, OAuth 2.0, and API key. See the [NestJS authentication docs](https://docs.nestjs.com/security/authentication) for the full Passport-based setup.
+</Note>
+
+## Adding a Guard
+
+A Guard implements the `CanActivate` interface and returns `true` to allow the request or `false` (or throws an exception) to deny it.
+
+### API key guard example
+
+```typescript src/auth/api-key.guard.ts
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { Request } from 'express';
+
+@Injectable()
+export class ApiKeyGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest<Request>();
+    const apiKey = request.headers['x-api-key'];
+
+    if (!apiKey || apiKey !== process.env.API_KEY) {
+      throw new UnauthorizedException('Invalid or missing API key');
+    }
+
+    return true;
+  }
+}
+```
+
+The guard reads the `x-api-key` header and compares it against the `API_KEY` environment variable. Any request without a valid key receives a `401 Unauthorized` response.
+
+## Setup
+
+<Steps>
+  <Step title="Create the auth module">
+    Create the Guard file at `src/auth/api-key.guard.ts` using the example above. Then create a module to export it:
+
+    ```typescript src/auth/auth.module.ts
+    import { Module } from '@nestjs/common';
+    import { ApiKeyGuard } from './api-key.guard';
+
+    @Module({
+      providers: [ApiKeyGuard],
+      exports: [ApiKeyGuard],
+    })
+    export class AuthModule {}
+    ```
+  </Step>
+
+  <Step title="Import the auth module">
+    Add `AuthModule` to the imports array in `AppModule`:
+
+    ```typescript src/app.module.ts
+    import { Module } from '@nestjs/common';
+    import { AppController } from './app.controller';
+    import { AppService } from './app.service';
+    import { AuthModule } from './auth/auth.module';
+
+    @Module({
+      imports: [AuthModule],
+      controllers: [AppController],
+      providers: [AppService],
+    })
+    export class AppModule {}
+    ```
+  </Step>
+
+  <Step title="Apply the guard to a controller">
+    Use `@UseGuards()` to protect individual routes or an entire controller:
+
+    ```typescript src/app.controller.ts
+    import { Controller, Get, UseGuards } from '@nestjs/common';
+    import { AppService } from './app.service';
+    import { ApiKeyGuard } from './auth/api-key.guard';
+
+    @Controller()
+    @UseGuards(ApiKeyGuard)
+    export class AppController {
+      constructor(private readonly appService: AppService) {}
+
+      @Get()
+      getHello(): string {
+        return this.appService.getHello();
+      }
+    }
+    ```
+
+    Applying `@UseGuards()` at the class level protects every route in the controller. To protect a single route, apply it to the method instead.
+  </Step>
+
+  <Step title="Set the API_KEY environment variable">
+    Add the key to your environment before starting the server:
+
+    ```bash
+    API_KEY=your-secret-key nest start
+    ```
+
+    In production, set `API_KEY` through your hosting platform's secret management rather than a `.env` file.
+  </Step>
+</Steps>
+
+## Global guard
+
+To enforce authentication across every route in the application without decorating each controller, register the guard globally in `main.ts`:
+
+```typescript src/main.ts
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { ApiKeyGuard } from './auth/api-key.guard';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  app.useGlobalGuards(new ApiKeyGuard());
+  await app.listen(3000);
+}
+bootstrap();
+```
+
+<Warning>
+  When using `app.useGlobalGuards()`, the guard is instantiated outside the NestJS dependency injection container. If your guard has dependencies (e.g., a config service), use `APP_GUARD` provider registration in a module instead.
+</Warning>
+
+<CardGroup cols={2}>
+  <Card title="Wallet operations" icon="wallet" href="/guides/wallet-operations">
+    Add wallet-specific endpoints to the API
+  </Card>
+  <Card title="Deployment" icon="cloud" href="/guides/deployment">
+    Deploy the API with authentication enabled
+  </Card>
+</CardGroup>

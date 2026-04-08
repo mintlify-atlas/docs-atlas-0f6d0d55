@@ -1,0 +1,78 @@
+---
+title: "API overview"
+description: "Base URL, response format, and conventions for the web3Wallet API"
+---
+
+The web3Wallet API is a RESTful HTTP API built with NestJS. It accepts and returns JSON, and follows standard HTTP conventions for methods, status codes, and error responses.
+
+## Base URL
+
+```
+http://localhost:3000
+```
+
+Run the server locally with `npm run start:dev`. The server listens on port 3000 by default, as configured in `src/main.ts`.
+
+## Request format
+
+All request bodies use JSON. Set the `Content-Type` header when sending a body:
+
+```bash
+Content-Type: application/json
+```
+
+## Response format
+
+Successful responses return JSON with an HTTP 2xx status code. The health endpoint is an exception — it returns a plain string.
+
+```json
+{
+  "address": "0xAbCd1234...",
+  "balance": "1000000000000000000",
+  "network": "mainnet"
+}
+```
+
+Error responses follow a standard NestJS error shape:
+
+```json
+{
+  "statusCode": 400,
+  "message": "Validation failed",
+  "error": "Bad Request"
+}
+```
+
+## HTTP methods
+
+| Method | Usage |
+|--------|-------|
+| `GET` | Retrieve a resource |
+| `POST` | Create a new resource |
+
+## Status codes
+
+| Code | Meaning |
+|------|---------|
+| `200` | Request succeeded |
+| `201` | Resource created |
+| `400` | Invalid request body or parameters |
+| `404` | Resource not found |
+| `500` | Internal server error |
+
+## Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Health check" icon="heart-pulse" href="/api/health">
+    `GET /` — verify the API is running. This is the only currently implemented endpoint.
+  </Card>
+  <Card title="Wallet endpoints" icon="wallet" href="/api/wallet">
+    `POST /wallet`, `GET /wallet/:address`, `GET /wallet/:address/balance` — planned wallet management API.
+  </Card>
+  <Card title="Transaction endpoints" icon="arrow-right-arrow-left" href="/api/transactions">
+    `POST /transactions`, `GET /transactions/:hash`, `GET /wallet/:address/transactions` — planned transaction API.
+  </Card>
+  <Card title="Data models" icon="database" href="/api/models/wallet">
+    Wallet and Transaction object schemas used in request and response bodies.
+  </Card>
+</CardGroup>

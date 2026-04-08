@@ -1,0 +1,139 @@
+---
+title: "Modules"
+description: "NestJS module organization in the web3Wallet API"
+---
+
+A NestJS **module** is a class decorated with `@Module()` that acts as the organizational boundary for a slice of your application. Every class — controller or service — belongs to exactly one module. The module's decorator metadata is what the DI container reads at bootstrap to know which pieces belong together and which dependencies to wire up.
+
+## The root module
+
+`AppModule` is the entry point of the module graph. Every other module in the application will be registered here via the `imports` array.
+
+```typescript app.module.ts
+import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+
+@Module({
+  imports: [],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
+```
+
+### @Module decorator properties
+
+| Property | Type | Purpose |
+|---|---|---|
+| `imports` | `Module[]` | Other modules whose exported providers this module needs. |
+| `controllers` | `Controller[]` | Controller classes that handle HTTP routes within this module. |
+| `providers` | `Provider[]` | Services and other injectables instantiated by the DI container for this module. |
+| `exports` | `Provider[]` | Subset of providers made available to importing modules. |
+
+`AppModule` currently declares no imports because all functionality lives in a single module. As the API grows, feature modules are added to `imports` to keep each domain self-contained.
+
+## Adding feature modules
+
+Each wallet domain (wallets, transactions, authentication) should live in its own feature module. This keeps route handlers, business logic, and data access for a given domain together and makes each unit independently testable.
+
+The pattern is:
+
+1. Create a dedicated directory under `src/` for the feature.
+2. Generate (or write) a module file, controller, and service.
+3. Register the new module in `AppModule.imports`.
+
+<CodeGroup>
+
+```typescript src/wallet/wallet.module.ts
+import { Module } from '@nestjs/common';
+import { WalletController } from './wallet.controller';
+import { WalletService } from './wallet.service';
+
+@Module({
+  controllers: [WalletController],
+  providers: [WalletService],
+})
+export class WalletModule {}
+```
+
+```typescript src/transaction/transaction.module.ts
+import { Module } from '@nestjs/common';
+import { TransactionController } from './transaction.controller';
+import { TransactionService } from './transaction.service';
+
+@Module({
+  controllers: [TransactionController],
+  providers: [TransactionService],
+})
+export class TransactionModule {}
+```
+
+```typescript src/app.module.ts (updated)
+import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { WalletModule } from './wallet/wallet.module';
+import { TransactionModule } from './transaction/transaction.module';
+
+@Module({
+  imports: [WalletModule, TransactionModule],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
+```
+
+</CodeGroup>
+
+Once a module is listed in `imports`, NestJS bootstraps its providers and registers its controllers automatically. No further wiring is needed in `main.ts`.
+
+## Sharing providers across modules
+
+If a service needs to be used in more than one module, export it from its home module and import that module wherever the service is needed.
+
+<CodeGroup>
+
+```typescript src/wallet/wallet.module.ts (with export)
+import { Module } from '@nestjs/common';
+import { WalletController } from './wallet.controller';
+import { WalletService } from './wallet.service';
+
+@Module({
+  controllers: [WalletController],
+  providers: [WalletService],
+  exports: [WalletService],       // makes WalletService available to importers
+})
+export class WalletModule {}
+```
+
+```typescript src/transaction/transaction.module.ts (importing WalletModule)
+import { Module } from '@nestjs/common';
+import { WalletModule } from '../wallet/wallet.module';
+import { TransactionController } from './transaction.controller';
+import { TransactionService } from './transaction.service';
+
+@Module({
+  imports: [WalletModule],        // WalletService is now injectable here
+  controllers: [TransactionController],
+  providers: [TransactionService],
+})
+export class TransactionModule {}
+```
+
+</CodeGroup>
+
+<Note>
+Only export providers that are genuinely needed by other modules. Keeping the `exports` array narrow prevents accidental coupling between domains.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture overview" icon="map" href="/architecture/overview">
+    See how modules, controllers, and services fit into the full request lifecycle.
+  </Card>
+  <Card title="Services" icon="gear" href="/architecture/services">
+    Learn how to build and inject services within and across modules.
+  </Card>
+</CardGroup>

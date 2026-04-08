@@ -1,0 +1,69 @@
+---
+title: "Transaction model"
+description: "Data model for blockchain transaction objects"
+---
+
+The Transaction object is returned by transaction submission and lookup endpoints. It represents a single on-chain transaction and its current state.
+
+## Fields
+
+<ResponseField name="hash" type="string" required>
+  The transaction hash in 0x-prefixed hexadecimal format. This is the unique identifier for the transaction on-chain and can be used to look it up in a block explorer.
+</ResponseField>
+
+<ResponseField name="from" type="string" required>
+  The sender's wallet address (0x-prefixed).
+</ResponseField>
+
+<ResponseField name="to" type="string" required>
+  The recipient's wallet address (0x-prefixed).
+</ResponseField>
+
+<ResponseField name="value" type="string" required>
+  The amount transferred, expressed in the blockchain's smallest native unit (wei for Ethereum-compatible networks). Returned as a string to preserve precision for large integer values.
+</ResponseField>
+
+<ResponseField name="gasPrice" type="string" required>
+  The gas price paid for this transaction, in wei. Returned as a string.
+</ResponseField>
+
+<ResponseField name="gasLimit" type="string" required>
+  The maximum amount of gas units allocated for this transaction. Returned as a string.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  The current state of the transaction. One of:
+
+  - `pending` — broadcast to the network, not yet included in a block
+  - `confirmed` — included in a block and finalized
+  - `failed` — execution reverted or transaction dropped
+</ResponseField>
+
+<ResponseField name="blockNumber" type="number">
+  The block number in which this transaction was confirmed. Only present when `status` is `confirmed`.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  ISO 8601 timestamp for when the transaction was submitted. Example: `2026-04-08T12:05:00.000Z`.
+</ResponseField>
+
+## Example
+
+```json
+{
+  "hash": "0xabc123def456789abc123def456789abc123def456789abc123def456789abc1",
+  "from": "0xAbCd1234EfGh5678IjKl9012MnOp3456QrSt7890",
+  "to": "0x1234AbCd5678EfGh9012IjKl3456MnOp7890QrSt",
+  "value": "100000000000000000",
+  "gasPrice": "20000000000",
+  "gasLimit": "21000",
+  "status": "confirmed",
+  "blockNumber": 19823401,
+  "timestamp": "2026-04-08T12:05:00.000Z"
+}
+```
+
+## Related
+
+- [Transaction endpoints](/api/transactions) — endpoints that create and return Transaction objects
+- [Wallet model](/api/models/wallet) — the Wallet object returned by wallet endpoints

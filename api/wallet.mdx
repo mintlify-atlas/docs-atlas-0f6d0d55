@@ -1,0 +1,161 @@
+---
+title: "Wallet endpoints"
+description: "Endpoints for managing Web3 wallets"
+---
+
+<Note>
+  These endpoints represent the intended API surface for the web3Wallet project. They follow standard NestJS controller patterns and are ready to be implemented. Only the [health check endpoint](/api/health) (`GET /`) is currently active.
+</Note>
+
+## Create a wallet
+
+Generates a new Web3 wallet and returns its address, public key, and metadata.
+
+**Method:** `POST`  
+**Path:** `/wallet`  
+**Authentication:** None
+
+### Request body
+
+<ParamField body="network" type="string" required>
+  The blockchain network to create the wallet on. For example: `mainnet`, `sepolia`, `polygon`.
+</ParamField>
+
+### Response
+
+<ResponseField name="address" type="string" required>
+  The wallet's blockchain address (0x-prefixed).
+</ResponseField>
+
+<ResponseField name="publicKey" type="string" required>
+  The wallet's public key.
+</ResponseField>
+
+<ResponseField name="balance" type="string" required>
+  Current balance in native units (wei for Ethereum-compatible networks).
+</ResponseField>
+
+<ResponseField name="network" type="string" required>
+  The blockchain network identifier.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  ISO 8601 timestamp for when the wallet was created.
+</ResponseField>
+
+### Example
+
+```bash
+curl --request POST \
+  --url http://localhost:3000/wallet \
+  --header 'Content-Type: application/json' \
+  --data '{"network": "sepolia"}'
+```
+
+```json
+{
+  "address": "0xAbCd1234EfGh5678IjKl9012MnOp3456QrSt7890",
+  "publicKey": "0x04a1b2c3d4e5f6...",
+  "balance": "0",
+  "network": "sepolia",
+  "createdAt": "2026-04-08T12:00:00.000Z"
+}
+```
+
+---
+
+## Get wallet details
+
+Retrieves details for an existing wallet by its blockchain address.
+
+**Method:** `GET`  
+**Path:** `/wallet/:address`  
+**Authentication:** None
+
+### Path parameters
+
+<ParamField path="address" type="string" required>
+  The wallet's blockchain address (0x-prefixed).
+</ParamField>
+
+### Response
+
+<ResponseField name="address" type="string" required>
+  The wallet's blockchain address.
+</ResponseField>
+
+<ResponseField name="publicKey" type="string" required>
+  The wallet's public key.
+</ResponseField>
+
+<ResponseField name="balance" type="string" required>
+  Current balance in native units.
+</ResponseField>
+
+<ResponseField name="network" type="string" required>
+  The blockchain network identifier.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  ISO 8601 timestamp for when the wallet was created.
+</ResponseField>
+
+### Example
+
+```bash
+curl http://localhost:3000/wallet/0xAbCd1234EfGh5678IjKl9012MnOp3456QrSt7890
+```
+
+```json
+{
+  "address": "0xAbCd1234EfGh5678IjKl9012MnOp3456QrSt7890",
+  "publicKey": "0x04a1b2c3d4e5f6...",
+  "balance": "500000000000000000",
+  "network": "sepolia",
+  "createdAt": "2026-04-08T12:00:00.000Z"
+}
+```
+
+---
+
+## Get wallet balance
+
+Returns the current balance for a wallet.
+
+**Method:** `GET`  
+**Path:** `/wallet/:address/balance`  
+**Authentication:** None
+
+### Path parameters
+
+<ParamField path="address" type="string" required>
+  The wallet's blockchain address (0x-prefixed).
+</ParamField>
+
+### Response
+
+<ResponseField name="address" type="string" required>
+  The wallet's blockchain address.
+</ResponseField>
+
+<ResponseField name="balance" type="string" required>
+  Current balance in native units (wei).
+</ResponseField>
+
+<ResponseField name="network" type="string" required>
+  The blockchain network the balance was queried from.
+</ResponseField>
+
+### Example
+
+```bash
+curl http://localhost:3000/wallet/0xAbCd1234EfGh5678IjKl9012MnOp3456QrSt7890/balance
+```
+
+```json
+{
+  "address": "0xAbCd1234EfGh5678IjKl9012MnOp3456QrSt7890",
+  "balance": "500000000000000000",
+  "network": "sepolia"
+}
+```

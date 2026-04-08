@@ -1,0 +1,226 @@
+---
+title: "Wallet operations"
+description: "Implementing core wallet functionality with the web3Wallet API"
+---
+
+The web3Wallet API currently exposes a single `GET /` endpoint defined in `AppController`. It calls `AppService.getHello()`, which returns the string `"Hello World!"`. This is the NestJS scaffold entry point — the foundation on which you build real wallet functionality.
+
+This guide walks through adding three wallet-specific endpoints: creating a wallet, fetching a balance, and sending a transaction.
+
+## Current entry point
+
+The existing controller and service look like this:
+
+<CodeGroup>
+
+```typescript src/app.controller.ts
+import { Controller, Get } from '@nestjs/common';
+import { AppService } from './app.service';
+
+@Controller()
+export class AppController {
+  constructor(private readonly appService: AppService) {}
+
+  @Get()
+  getHello(): string {
+    return this.appService.getHello();
+  }
+}
+```
+
+```typescript src/app.service.ts
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class AppService {
+  getHello(): string {
+    return 'Hello World!';
+  }
+}
+```
+
+</CodeGroup>
+
+`GET /` returns a plain `200 OK` with the body `Hello World!`. This is a useful health check, but wallet functionality needs its own dedicated module.
+
+## Implementation
+
+<Steps>
+  <Step title="Create the wallet module files">
+    Create the service and controller files for the wallet domain:
+
+    ```bash
+    mkdir -p src/wallet
+    touch src/wallet/wallet.service.ts
+    touch src/wallet/wallet.controller.ts
+    touch src/wallet/wallet.module.ts
+    ```
+  </Step>
+
+  <Step title="Implement the service and controller">
+    The service holds business logic. The controller maps HTTP routes to service methods.
+
+    <CodeGroup>
+
+    ```typescript src/wallet/wallet.service.ts
+    import { Injectable } from '@nestjs/common';
+
+    export interface Wallet {
+      address: string;
+      balance: string;
+      createdAt: string;
+    }
+
+    export interface Transaction {
+      from: string;
+      to: string;
+      amount: string;
+      txHash: string;
+    }
+
+    @Injectable()
+    export class WalletService {
+      createWallet(): Wallet {
+        // Replace with real key generation logic
+        return {
+          address: '0x' + Math.random().toString(16).slice(2, 42).padEnd(40, '0'),
+          balance: '0',
+          createdAt: new Date().toISOString(),
+        };
+      }
+
+      getBalance(address: string): { address: string; balance: string } {
+        // Replace with real on-chain balance lookup
+        return { address, balance: '0' };
+      }
+
+      sendTransaction(
+        from: string,
+        to: string,
+        amount: string,
+      ): Transaction {
+        // Replace with real transaction broadcast logic
+        return {
+          from,
+          to,
+          amount,
+          txHash: '0x' + Math.random().toString(16).slice(2, 66).padEnd(64, '0'),
+        };
+      }
+    }
+    ```
+
+    ```typescript src/wallet/wallet.controller.ts
+    import {
+      Controller,
+      Get,
+      Post,
+      Body,
+      Param,
+    } from '@nestjs/common';
+    import { WalletService } from './wallet.service';
+
+    @Controller('wallet')
+    export class WalletController {
+      constructor(private readonly walletService: WalletService) {}
+
+      @Post('create')
+      createWallet() {
+        return this.walletService.createWallet();
+      }
+
+      @Get(':address/balance')
+      getBalance(@Param('address') address: string) {
+        return this.walletService.getBalance(address);
+      }
+
+      @Post('send')
+      sendTransaction(
+        @Body() body: { from: string; to: string; amount: string },
+      ) {
+        return this.walletService.sendTransaction(body.from, body.to, body.amount);
+      }
+    }
+    ```
+
+    </CodeGroup>
+  </Step>
+
+  <Step title="Register the wallet module">
+    Create the module and register it in `AppModule`:
+
+    <CodeGroup>
+
+    ```typescript src/wallet/wallet.module.ts
+    import { Module } from '@nestjs/common';
+    import { WalletController } from './wallet.controller';
+    import { WalletService } from './wallet.service';
+
+    @Module({
+      controllers: [WalletController],
+      providers: [WalletService],
+    })
+    export class WalletModule {}
+    ```
+
+    ```typescript src/app.module.ts
+    import { Module } from '@nestjs/common';
+    import { AppController } from './app.controller';
+    import { AppService } from './app.service';
+    import { WalletModule } from './wallet/wallet.module';
+
+    @Module({
+      imports: [WalletModule],
+      controllers: [AppController],
+      providers: [AppService],
+    })
+    export class AppModule {}
+    ```
+
+    </CodeGroup>
+  </Step>
+
+  <Step title="Test the endpoints">
+    Start the server and call the new routes:
+
+    ```bash
+    # Create a wallet
+    curl -X POST http://localhost:3000/wallet/create
+
+    # Get balance for an address
+    curl http://localhost:3000/wallet/0xYourAddressHere/balance
+
+    # Send a transaction
+    curl -X POST http://localhost:3000/wallet/send \
+      -H "Content-Type: application/json" \
+      -d '{"from":"0xSender","to":"0xRecipient","amount":"0.01"}'
+    ```
+  </Step>
+</Steps>
+
+## Endpoints summary
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/wallet/create` | Create a new wallet and return its address |
+| `GET` | `/wallet/:address/balance` | Fetch the balance for a wallet address |
+| `POST` | `/wallet/send` | Broadcast a transaction between two addresses |
+
+<Note>
+  The service methods above use placeholder logic. Replace `createWallet`, `getBalance`, and `sendTransaction` with calls to your blockchain library (e.g., ethers.js or web3.js) before deploying.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/guides/authentication">
+    Secure these endpoints with API key or JWT guards
+  </Card>
+  <Card title="Testing" icon="flask" href="/guides/testing">
+    Write unit and e2e tests for the wallet module
+  </Card>
+  <Card title="API reference" icon="code" href="/api/wallet">
+    Full wallet endpoint specifications
+  </Card>
+  <Card title="Architecture" icon="building" href="/architecture/modules">
+    How NestJS modules organize the codebase
+  </Card>
+</CardGroup>
